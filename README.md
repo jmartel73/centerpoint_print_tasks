@@ -45,19 +45,26 @@ so they keep working in the PDF.
    `centerpoint_ue_notes_pdf.js`, type **User Event**.
 3. Deploy it to the record type that has these fields (the `custevent` prefix means a
    CRM/event field — Event, Task, Phone Call, Case, etc.). Status **Released**.
-4. Make `custevent_ng_notes_pdf` a **Long Text** field — **not Rich Text**. A Rich
-   Text destination re-sanitizes/normalizes its content on save (re-introducing
-   `&nbsp;`, un-self-closing `<br>`, dropping tags), which reverses the scrub. A Long
-   Text field stores the exact bytes you write. Apply it to the same record/forms, and
-   set its **Display Type to Hidden** (it only feeds the PDF; on a form it would show
-   raw HTML as text).
-5. In the Advanced PDF template, render the new field with auto-escaping disabled,
-   otherwise NetSuite escapes the `<`/`>` and the HTML prints as literal text. Use the
-   FreeMarker `?no_esc` built-in:
-   `${record.custevent_ng_notes_pdf?no_esc}`
-   (or wrap a block in `<#noautoesc>...</#noautoesc>`). Note: `@unescaped` is NOT valid
-   syntax. BFO only ships Helvetica/Times/Courier fonts, so non-standard
-   `font-family` values (e.g. Inter) fall back unless embedded.
+4. Make `custevent_ng_notes_pdf` a **Rich Text** field. NetSuite HTML-escapes the
+   values of plain/Long Text fields when building the Advanced PDF data model (same as
+   `Formula(Text)` vs `Formula(HTML)`), so a non-rich field renders its tags as literal
+   text. Only Rich Text fields are passed to the renderer as raw markup. Apply it to the
+   same record/forms. The scrubber already outputs well-formed XHTML, so re-save a
+   record to populate it.
+5. In the Advanced PDF template, reference the field plainly:
+   `${record.custevent_ng_notes_pdf}`
+   Do **not** add `?no_esc` — these templates use an undefined output format (no
+   auto-escaping), so `?no_esc` throws "output format isn't a markup format". And
+   `@unescaped` is not valid syntax. BFO only ships Helvetica/Times/Courier fonts, so
+   non-standard `font-family` values (e.g. Inter) fall back unless embedded.
+
+   Fallback — if a Rich Text destination re-normalizes the HTML on save and brings back
+   parse errors, keep the field as **Long Text** and decode NetSuite's escaping in the
+   template instead (works because the output format is undefined / non-escaping):
+   ```
+   ${record.custevent_ng_notes_pdf?replace("&lt;","<")?replace("&gt;",">")?replace("&quot;","\"")?replace("&amp;","&")}
+   ```
+   (`&amp;` must be replaced last.)
 
 ### Optional script parameters
 
