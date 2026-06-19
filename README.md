@@ -83,10 +83,15 @@ script's **Execution Log** (entries "NG Notes RAW" / "NG Notes SCRUBBED").
   reads the field through a join (e.g.
   `record.custrecord_..._projtask.custevent_ng_notes_pdf`), you must edit & save that
   *related* record (the Project Task), not the record you print, to refresh the value.
-- **"attribute style/... must not contain the '<' character"** — there is a stray `<`
-  in the notes: a literal `<` someone typed (e.g. "lead time < 2 weeks", "<3"), or a
-  tag with a missing quote/`>`. The scrubber escapes these to `&lt;`; if it persists,
-  set Log Level to Debug, re-save, and inspect the "NG Notes RAW" log entry.
+- **"attribute style/... must not contain the '<' character"** — two possible causes:
+  (1) a stray `<` in the notes (a literal `<` someone typed, or a tag with a missing
+  quote/`>`) — the scrubber escapes these to `&lt;`; or (2) **NetSuite converts newlines
+  in the stored value into `<br />` tags** when rendering, and a newline sitting *inside*
+  a tag (pretty-printed markup) injects a `<br />` into the tag/attribute. The scrubber
+  strips raw newlines (`collapseNewlines`) to prevent this. If it persists, set Log Level
+  to Debug, re-save, and inspect the "NG Notes RAW" log entry. Tip: `${field?html}` in
+  the template prints the delivered value as literal text so you can see exactly what
+  arrives (escaped vs. raw, and where any stray `<` is).
 - **HTML prints as literal text** — the destination is not a Rich Text field, or the
   template adds `?no_esc` on an undefined output format. See deployment step 5.
 

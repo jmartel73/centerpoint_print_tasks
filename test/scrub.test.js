@@ -105,6 +105,16 @@ contains('valid tag after a broken one is preserved',
     scrubHtml('<p style="x:1<p style="color:red;">good</p>'),
     '<p style="color:red;">good</p>');
 
+// --- newlines (NetSuite converts \n -> <br />, which breaks tags) -----------
+check('newline inside a tag removed', scrubHtml('<p\nstyle="color:red">hi</p>'), '<p style="color:red">hi</p>');
+check('newline between tags removed', scrubHtml('<p>a</p>\n<p>b</p>'), '<p>a</p> <p>b</p>');
+check('windows newline inside tag removed',
+    scrubHtml('<p\r\nstyle="x:1">y</p>'), '<p style="x:1">y</p>');
+excludes('no raw newline survives', scrubHtml('<p>a\nb\nc</p>'), '\n');
+check('newline inside style value removed',
+    scrubHtml('<p style="color:red;\nfont-size:10pt">z</p>'),
+    '<p style="color:red; font-size:10pt">z</p>');
+
 // --- junk removal ----------------------------------------------------------
 check('comment removed', scrubHtml('a<!-- note -->b'), 'ab');
 excludes('script removed', scrubHtml('<p>ok</p><script>evil()</script>'), 'evil');
@@ -155,6 +165,15 @@ var realNotes =
 var realOut = scrubHtml(realNotes);
 excludes('real notes: no stray < inside attributes', realOut.replace(/<\/?p[^>]*>/g, ''), '<');
 contains('real notes: paragraphs preserved', realOut, 'Opening this project to put on your radar.');
+excludes('real notes: no raw newlines (would become <br/> in tags)', realOut, '\n');
+
+// Newline inside the opening tag, exactly as NetSuite delivered it (<p \n style=...).
+var brokenTag = '<p\nstyle="color:#272B32;font-family:Inter;font-size:10.5pt;">\nFreight: Yes\n</p>';
+var fixedTag = scrubHtml(brokenTag);
+excludes('newline-in-tag: result has no newline', fixedTag, '\n');
+contains('newline-in-tag: opening tag intact', fixedTag, '<p style="color:#272B32;');
+excludes('newline-in-tag: no < inside the opening tag',
+    fixedTag.slice(fixedTag.indexOf('<p'), fixedTag.indexOf('>') + 1).slice(2, -1), '<');
 
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

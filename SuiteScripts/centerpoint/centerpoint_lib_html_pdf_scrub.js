@@ -83,6 +83,14 @@ define([], function () {
      * Remove document scaffolding and copy/paste junk while preserving inner
      * text content where appropriate.
      */
+    /**
+     * Replace every newline (and surrounding runs of newlines/whitespace) with a single
+     * space so NetSuite's newline-to-<br /> conversion cannot inject a '<' into a tag.
+     */
+    function collapseNewlines(html) {
+        return html.replace(/\s*[\r\n]+\s*/g, ' ');
+    }
+
     function stripDangerousBlocks(html) {
         // Standard and downlevel-hidden conditional comments (<!--[if]>..<![endif]-->).
         html = html.replace(/<!--[\s\S]*?-->/g, '');
@@ -252,6 +260,14 @@ define([], function () {
             return '';
         }
 
+        // Remove raw newlines. NetSuite converts every newline in a stored field value
+        // into a <br /> tag when rendering; if a newline sits inside a tag (pretty-
+        // printed markup often has them), that injects a '<' into the tag/attribute and
+        // breaks the XHTML ("attribute style must not contain the '<' character").
+        // Newlines between/inside tags are insignificant HTML whitespace, so replacing
+        // them with a space is safe -- block elements still control line breaks.
+        html = collapseNewlines(html);
+
         html = stripDangerousBlocks(html);
         html = neutralizeStrayBrackets(html);
         html = selfCloseVoidElements(html);
@@ -266,6 +282,7 @@ define([], function () {
         scrubHtml: scrubHtml,
         // Exposed for targeted unit testing.
         _internal: {
+            collapseNewlines: collapseNewlines,
             stripDangerousBlocks: stripDangerousBlocks,
             neutralizeStrayBrackets: neutralizeStrayBrackets,
             selfCloseVoidElements: selfCloseVoidElements,
