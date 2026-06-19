@@ -3,6 +3,10 @@
 Maps a NetSuite **Rich Text** field into an Advanced PDF/HTML template without the
 rendering errors that loose WYSIWYG HTML normally causes.
 
+> **Reusing this elsewhere?** See **[`docs/RICH_TEXT_TO_PDF_PLAYBOOK.md`](docs/RICH_TEXT_TO_PDF_PLAYBOOK.md)** —
+> a general, account-agnostic guide: every scrub transformation, the NetSuite escaping
+> rules, the template snippets, deployment patterns, and an error→fix lookup table.
+
 ## The problem
 
 NetSuite Advanced PDF/HTML templates use FreeMarker (2.3.x) for templating, but the
