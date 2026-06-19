@@ -100,6 +100,43 @@ define([], function () {
         return html;
     }
 
+    // Matches a single complete, well-formed start/end tag. Attribute values may be
+    // single- or double-quoted (and may themselves contain '<', which we fix below)
+    // or a simple unquoted token.
+    var COMPLETE_TAG_RE = /^<\/?[a-zA-Z][a-zA-Z0-9:-]*(?:\s+[^\s=\/>"']+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]*))?)*\s*\/?>/;
+
+    /**
+     * Neutralize stray '<' characters so the XML parser never runs off the end of a
+     * tag. A '<' that does not begin a complete, well-formed tag (a literal "a < b",
+     * a "<3", or a tag with a missing quote/'>') is escaped to '&lt;'. A '<' that DOES
+     * appear inside an otherwise valid tag's quoted attribute value is also escaped,
+     * because XML forbids a literal '<' in attribute values even when quoted -- this is
+     * the exact cause of "attribute style must not contain the '<' character".
+     */
+    function neutralizeStrayBrackets(html) {
+        var out = '';
+        var i = 0;
+        var len = html.length;
+        while (i < len) {
+            var ch = html.charAt(i);
+            if (ch === '<') {
+                var match = COMPLETE_TAG_RE.exec(html.slice(i));
+                if (match) {
+                    // Keep the leading '<'; escape any '<' inside attribute values.
+                    out += '<' + match[0].slice(1).replace(/</g, '&lt;');
+                    i += match[0].length;
+                } else {
+                    out += '&lt;';
+                    i += 1;
+                }
+            } else {
+                out += ch;
+                i += 1;
+            }
+        }
+        return out;
+    }
+
     /**
      * Ensure every void element is written as a self-closed XHTML tag.
      */
@@ -216,6 +253,7 @@ define([], function () {
         }
 
         html = stripDangerousBlocks(html);
+        html = neutralizeStrayBrackets(html);
         html = selfCloseVoidElements(html);
         html = fixEntities(html);
         html = quoteBareAttributes(html);
@@ -229,6 +267,7 @@ define([], function () {
         // Exposed for targeted unit testing.
         _internal: {
             stripDangerousBlocks: stripDangerousBlocks,
+            neutralizeStrayBrackets: neutralizeStrayBrackets,
             selfCloseVoidElements: selfCloseVoidElements,
             fixEntities: fixEntities,
             quoteBareAttributes: quoteBareAttributes,

@@ -31,6 +31,15 @@ define(['./centerpoint_lib_html_pdf_scrub', 'N/runtime', 'N/log'], function (scr
         }
     }
 
+    function isDebug() {
+        try {
+            var value = runtime.getCurrentScript().getParameter({ name: 'custscript_ng_notes_debug' });
+            return value === true || value === 'T' || value === 'true';
+        } catch (e) {
+            return false;
+        }
+    }
+
     function beforeSubmit(context) {
         var type = context.type;
 
@@ -47,6 +56,13 @@ define(['./centerpoint_lib_html_pdf_scrub', 'N/runtime', 'N/log'], function (scr
             var rec = context.newRecord;
             var raw = rec.getValue({ fieldId: sourceField });
             var cleaned = scrub.scrubHtml(raw);
+
+            // Optional: set script parameter custscript_ng_notes_debug = T to log the
+            // exact raw and scrubbed HTML (useful when a PDF still fails to render).
+            if (isDebug()) {
+                log.debug({ title: 'NG Notes RAW (' + sourceField + ')', details: raw });
+                log.debug({ title: 'NG Notes SCRUBBED (' + targetField + ')', details: cleaned });
+            }
 
             rec.setValue({
                 fieldId: targetField,

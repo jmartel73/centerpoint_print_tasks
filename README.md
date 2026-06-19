@@ -73,6 +73,17 @@ fields without editing code, add these script parameters and set them per deploy
 
 - `custscript_ng_notes_source` — source rich text field id
 - `custscript_ng_notes_target` — target field id
+- `custscript_ng_notes_debug` — checkbox/text; set to `T` to log the exact raw and
+  scrubbed HTML (Script Execution log, Debug level) for troubleshooting a PDF failure.
+
+## Troubleshooting
+
+- **"attribute style/... must not contain the '<' character"** — there is a stray `<`
+  in the notes: a literal `<` someone typed (e.g. "lead time < 2 weeks", "<3"), or a
+  tag with a missing quote/`>`. The scrubber escapes these to `&lt;`; turn on
+  `custscript_ng_notes_debug` and re-save to capture the raw source if it persists.
+- **HTML prints as literal text** — the destination is not a Rich Text field, or the
+  template adds `?no_esc` on an undefined output format. See deployment step 5.
 
 ## Notes / limitations
 

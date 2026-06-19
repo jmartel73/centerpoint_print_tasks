@@ -92,6 +92,19 @@ check('table cells auto-closed',
     scrubHtml('<table><tr><td>a<td>b</tr></table>'),
     '<table><tr><td>a</td><td>b</td></tr></table>');
 
+// --- stray '<' / malformed tags (BFO "must not contain '<'") ----------------
+check('literal less-than in text escaped', scrubHtml('lead time < 2 weeks'), 'lead time &lt; 2 weeks');
+check('less-than-three escaped', scrubHtml('I <3 it'), 'I &lt;3 it');
+check('lt inside quoted style attr escaped',
+    scrubHtml('<p style="a<b">x</p>'),
+    '<p style="a&lt;b">x</p>');
+contains('tag with missing closing quote does not crash, < neutralized',
+    scrubHtml('<p>ok</p><p style="color:#27'),
+    '&lt;p style=');
+contains('valid tag after a broken one is preserved',
+    scrubHtml('<p style="x:1<p style="color:red;">good</p>'),
+    '<p style="color:red;">good</p>');
+
 // --- junk removal ----------------------------------------------------------
 check('comment removed', scrubHtml('a<!-- note -->b'), 'ab');
 excludes('script removed', scrubHtml('<p>ok</p><script>evil()</script>'), 'evil');
@@ -133,6 +146,15 @@ contains('sample: br self-closed', out, '<br />');
 excludes('sample: no msoffice', out, 'o:p');
 excludes('sample: no conditional junk', out, 'junk');
 contains('sample: list items closed', out, '<li>one</li>');
+
+// --- regression: real pasted notes content stays well-formed ---------------
+var realNotes =
+    '<p style="color:#272B32;font-family:Inter;font-size:10.5pt;margin-bottom:0in;margin-right:0in;margin-top:0in;">\n  Opening this project to put on your radar. \n</p>\n' +
+    '<p style="color:#272B32;font-family:Inter;font-size:10.5pt;margin-bottom:0in;margin-right:0in;margin-top:0in;">\n   \n</p>\n' +
+    '<p style="color:#272B32;font-family:Inter;font-size:10.5pt;margin-bottom:0in;margin-right:0in;margin-top:0in;">\n  Design: No\n</p>';
+var realOut = scrubHtml(realNotes);
+excludes('real notes: no stray < inside attributes', realOut.replace(/<\/?p[^>]*>/g, ''), '<');
+contains('real notes: paragraphs preserved', realOut, 'Opening this project to put on your radar.');
 
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);
