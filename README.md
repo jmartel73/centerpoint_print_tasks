@@ -22,29 +22,36 @@ culprits:
 
 ## The solution
 
-A **User Event script** runs on every save, reads the Rich Text field
-(`custevent1`), scrubs the HTML into well-formed XHTML, and writes it to
-`custevent_ng_notes_pdf`. **Map that field into the PDF template** instead of the
-raw rich text field. Hyperlinks (`<a href>`) and images (`<img src>`) are preserved,
-so they keep working in the PDF.
+A **User Event script** runs on save, scrubs the Rich Text notes (`custevent1`) into
+well-formed XHTML, and stores the result in a Long Text field that the PDF template
+references. Hyperlinks (`<a href>`) and images (`<img src>`) are preserved.
+
+Two deployment shapes:
+
+- **Notes field and PDF are on the same record** → use `centerpoint_ue_notes_pdf.js`
+  (scrubs `custevent1` → `custevent_ng_notes_pdf` on that record).
+- **PDF is printed from a record that only *references* the task** (notes live on a
+  related Project Task) → use **only** `centerpoint_ue_notes_pdf_copy.js` on the print
+  record. It loads the task, scrubs `custevent1`, and stores the result in a local Long
+  Text field — referenced **directly** (no join, which would truncate). In this shape
+  you do **not** need the other script or a notes field on the task.
 
 ### Files
 
 | File | Purpose |
 |---|---|
-| `SuiteScripts/centerpoint/centerpoint_lib_html_pdf_scrub.js` | Reusable, dependency-free scrub library (`scrubHtml`) |
-| `SuiteScripts/centerpoint/centerpoint_ue_notes_pdf.js` | User Event script (`beforeSubmit`) wiring the field to the library |
-| `SuiteScripts/centerpoint/centerpoint_ue_notes_pdf_copy.js` | User Event that copies the scrubbed notes onto the print record (avoids join truncation) |
+| `SuiteScripts/centerpoint/centerpoint_lib_html_pdf_scrub.js` | Reusable, dependency-free scrub library (`scrubHtml`). Always required. |
+| `SuiteScripts/centerpoint/centerpoint_ue_notes_pdf.js` | Same-record scrub (`custevent1` → `custevent_ng_notes_pdf`) |
+| `SuiteScripts/centerpoint/centerpoint_ue_notes_pdf_copy.js` | Cross-record: loads the related task, scrubs, stores locally (avoids join truncation) |
 | `test/scrub.test.js` | Offline unit tests (`node test/scrub.test.js`) |
 
 ### Important: do not read the field through a join
 
 Advanced PDF templates **truncate fields read through a record join** (e.g.
 `record.custrecord_..._projtask.custevent_ng_notes_pdf` gets cut off around ~1,000
-characters, mid-tag, which re-breaks the XHTML). If the PDF is printed from a record
-that only *references* the task, deploy `centerpoint_ue_notes_pdf_copy.js` on that
-print record. It `record.load`s the task and copies the full scrubbed notes into a
-local Long Text field, which the template then references **directly** (no join):
+characters, mid-tag, which re-breaks the XHTML). That is what
+`centerpoint_ue_notes_pdf_copy.js` solves — it puts the full scrubbed value in a local
+field so the template references it **directly**:
 ```
 ${record.custrecord_ng_notes_pdf_local?replace("&lt;","<")?replace("&gt;",">")?replace("&quot;","\"")?replace("&amp;","&")}
 ```

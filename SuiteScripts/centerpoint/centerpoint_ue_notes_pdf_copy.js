@@ -1,15 +1,17 @@
 /**
  * centerpoint_ue_notes_pdf_copy.js
  *
- * Companion to centerpoint_ue_notes_pdf.js. Advanced PDF templates TRUNCATE fields
- * that are read through a record join (e.g.
- *   record.custrecord_ng_eh_projtaskpdf_projtask.custevent_ng_notes_pdf
- * gets cut off around ~1,000 characters, mid-tag, which breaks the XHTML).
+ * Self-contained: on save of the print record, loads the related Project Task, reads
+ * its raw Rich Text notes (custevent1), scrubs them into BFO-safe XHTML, and stores the
+ * result in a Long Text field ON the print record. The template then references that
+ * local field DIRECTLY (no join).
  *
- * To avoid the join, this script copies the already-scrubbed notes from the related
- * Project Task onto a Long Text field on the print record itself, so the template can
- * reference it directly (no join, no truncation). record.load returns the full field
- * value, unlike a join or saved-search column.
+ * Why local (not a join): Advanced PDF templates truncate fields read through a record
+ * join (~1,000 chars, mid-tag), which re-breaks the XHTML. record.load + a local field
+ * delivers the full value.
+ *
+ * This replaces the need for a separate User Event on the Project Task -- the scrub
+ * happens here, against the raw source field, so there is a single source of truth.
  *
  * Deploy on the record the PDF is printed from (the one that references the task).
  *
@@ -17,14 +19,14 @@
  * @NScriptType UserEventScript
  * @NModuleScope SameAccount
  */
-define(['N/record', 'N/runtime', 'N/log'], function (record, runtime, log) {
+define(['./centerpoint_lib_html_pdf_scrub', 'N/record', 'N/runtime', 'N/log'], function (scrub, record, runtime, log) {
     'use strict';
 
     // Field on THIS record that references the Project Task.
     var DEFAULT_TASK_REF_FIELD = 'custrecord_ng_eh_projtaskpdf_projtask';
-    // Scrubbed notes field ON the Project Task (populated by centerpoint_ue_notes_pdf).
-    var DEFAULT_SOURCE_FIELD = 'custevent_ng_notes_pdf';
-    // Long Text field on THIS record to copy the notes into (create this).
+    // Raw Rich Text notes field ON the Project Task.
+    var DEFAULT_SOURCE_FIELD = 'custevent1';
+    // Long Text field on THIS record to store the scrubbed notes into (create this).
     var DEFAULT_TARGET_FIELD = 'custrecord_ng_notes_pdf_local';
     // Record type of the referenced task.
     var DEFAULT_TASK_TYPE = 'projecttask';
@@ -52,13 +54,16 @@ define(['N/record', 'N/runtime', 'N/log'], function (record, runtime, log) {
             var rec = context.newRecord;
             var taskId = rec.getValue({ fieldId: taskRefField });
 
-            var notes = '';
+            var raw = '';
             if (taskId) {
                 var task = record.load({ type: taskType, id: taskId, isDynamic: false });
-                notes = task.getValue({ fieldId: sourceField }) || '';
+                raw = task.getValue({ fieldId: sourceField }) || '';
             }
 
-            rec.setValue({ fieldId: targetField, value: notes, ignoreFieldChange: true });
+            var cleaned = scrub.scrubHtml(raw);
+            log.debug({ title: 'NG Notes SCRUBBED (' + targetField + ')', details: cleaned });
+
+            rec.setValue({ fieldId: targetField, value: cleaned, ignoreFieldChange: true });
         } catch (e) {
             log.error({
                 title: 'NG Notes PDF copy failed',
@@ -71,3 +76,4 @@ define(['N/record', 'N/runtime', 'N/log'], function (record, runtime, log) {
         beforeSubmit: beforeSubmit
     };
 });
+
