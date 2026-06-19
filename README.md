@@ -73,15 +73,21 @@ fields without editing code, add these script parameters and set them per deploy
 
 - `custscript_ng_notes_source` — source rich text field id
 - `custscript_ng_notes_target` — target field id
-- `custscript_ng_notes_debug` — checkbox/text; set to `T` to log the exact raw and
-  scrubbed HTML (Script Execution log, Debug level) for troubleshooting a PDF failure.
+
+The script also logs the raw and scrubbed HTML at **debug** level on every save. To
+capture it, set the **deployment Log Level to Debug**, save the record, then read the
+script's **Execution Log** (entries "NG Notes RAW" / "NG Notes SCRUBBED").
 
 ## Troubleshooting
 
+- **The target field only updates when the record that owns it is saved.** If the PDF
+  reads the field through a join (e.g.
+  `record.custrecord_..._projtask.custevent_ng_notes_pdf`), you must edit & save that
+  *related* record (the Project Task), not the record you print, to refresh the value.
 - **"attribute style/... must not contain the '<' character"** — there is a stray `<`
   in the notes: a literal `<` someone typed (e.g. "lead time < 2 weeks", "<3"), or a
-  tag with a missing quote/`>`. The scrubber escapes these to `&lt;`; turn on
-  `custscript_ng_notes_debug` and re-save to capture the raw source if it persists.
+  tag with a missing quote/`>`. The scrubber escapes these to `&lt;`; if it persists,
+  set Log Level to Debug, re-save, and inspect the "NG Notes RAW" log entry.
 - **HTML prints as literal text** — the destination is not a Rich Text field, or the
   template adds `?no_esc` on an undefined output format. See deployment step 5.
 
