@@ -31,10 +31,13 @@ Two deployment shapes:
 - **Notes field and PDF are on the same record** → use `centerpoint_ue_notes_pdf.js`
   (scrubs `custevent1` → `custevent_ng_notes_pdf` on that record).
 - **PDF is printed from a record that only *references* the task** (notes live on a
-  related Project Task) → use **only** `centerpoint_ue_notes_pdf_copy.js` on the print
-  record. It loads the task, scrubs `custevent1`, and stores the result in a local Long
-  Text field — referenced **directly** (no join, which would truncate). In this shape
-  you do **not** need the other script or a notes field on the task.
+  related Project Task), and you only ever save the **task**, not the print record →
+  use **only** `centerpoint_ue_notes_pdf_copy.js` on the print record. It runs on
+  **beforeLoad (print/email/view)**: it loads the task, scrubs `custevent1`, and sets a
+  local Long Text field in memory, which the template references **directly** (no join,
+  no truncation). Because it computes at print time, saving the task is enough — you
+  never save the print record. In this shape you do **not** need the other script or a
+  notes field on the task.
 
 ### Files
 

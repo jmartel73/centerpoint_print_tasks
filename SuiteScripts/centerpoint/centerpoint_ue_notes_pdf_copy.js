@@ -1,19 +1,24 @@
 /**
  * centerpoint_ue_notes_pdf_copy.js
  *
- * Self-contained: on save of the print record, loads the related Project Task, reads
- * its raw Rich Text notes (custevent1), scrubs them into BFO-safe XHTML, and stores the
- * result in a Long Text field ON the print record. The template then references that
- * local field DIRECTLY (no join).
+ * Surfaces a related Project Task's Rich Text notes into the print record's Advanced
+ * PDF, scrubbed into BFO-safe XHTML, WITHOUT reading them through a join (joins
+ * truncate at ~1,000 chars, mid-tag) and WITHOUT requiring the print record to be saved.
  *
- * Why local (not a join): Advanced PDF templates truncate fields read through a record
- * join (~1,000 chars, mid-tag), which re-breaks the XHTML. record.load + a local field
- * delivers the full value.
+ * It runs on beforeLoad (print / email / view): it loads the referenced task, reads the
+ * raw notes (custevent1), scrubs them, and sets the value on the in-memory record so the
+ * template can reference it directly. Because it computes at print time, editing the
+ * task's notes is enough -- you never have to save the print record.
  *
- * This replaces the need for a separate User Event on the Project Task -- the scrub
- * happens here, against the raw source field, so there is a single source of truth.
+ * Template reference (Long Text values arrive HTML-escaped, so decode them):
+ *   ${record.custrecord_ng_notes_pdf_local?replace("&lt;","<")?replace("&gt;",">")?replace("&quot;","\"")?replace("&amp;","&")}
  *
- * Deploy on the record the PDF is printed from (the one that references the task).
+ * Deploy on the record the PDF is printed from (the one that references the task). The
+ * target field must exist on that record (Long Text); it does not need "Store Value".
+ *
+ * Note: beforeLoad fires for the standard Print/Email/View actions. If you also generate
+ * the PDF from a scripted render (N/render in a Suitelet/scheduled script), call the
+ * scrub there too -- beforeLoad does not fire for that path.
  *
  * @NApiVersion 2.1
  * @NScriptType UserEventScript
@@ -26,7 +31,7 @@ define(['./centerpoint_lib_html_pdf_scrub', 'N/record', 'N/runtime', 'N/log'], f
     var DEFAULT_TASK_REF_FIELD = 'custrecord_ng_eh_projtaskpdf_projtask';
     // Raw Rich Text notes field ON the Project Task.
     var DEFAULT_SOURCE_FIELD = 'custevent1';
-    // Long Text field on THIS record to store the scrubbed notes into (create this).
+    // Field on THIS record the template reads (Long Text).
     var DEFAULT_TARGET_FIELD = 'custrecord_ng_notes_pdf_local';
     // Record type of the referenced task.
     var DEFAULT_TASK_TYPE = 'projecttask';
@@ -40,8 +45,10 @@ define(['./centerpoint_lib_html_pdf_scrub', 'N/record', 'N/runtime', 'N/log'], f
         }
     }
 
-    function beforeSubmit(context) {
-        if (context.type === context.UserEventType.DELETE) {
+    function beforeLoad(context) {
+        var UET = context.UserEventType;
+        // Only the read/output contexts -- never on create/edit (would fight the form).
+        if (context.type !== UET.PRINT && context.type !== UET.EMAIL && context.type !== UET.VIEW) {
             return;
         }
 
@@ -53,27 +60,23 @@ define(['./centerpoint_lib_html_pdf_scrub', 'N/record', 'N/runtime', 'N/log'], f
         try {
             var rec = context.newRecord;
             var taskId = rec.getValue({ fieldId: taskRefField });
-
-            var raw = '';
-            if (taskId) {
-                var task = record.load({ type: taskType, id: taskId, isDynamic: false });
-                raw = task.getValue({ fieldId: sourceField }) || '';
+            if (!taskId) {
+                return;
             }
 
-            var cleaned = scrub.scrubHtml(raw);
-            log.debug({ title: 'NG Notes SCRUBBED (' + targetField + ')', details: cleaned });
+            var task = record.load({ type: taskType, id: taskId, isDynamic: false });
+            var cleaned = scrub.scrubHtml(task.getValue({ fieldId: sourceField }) || '');
 
             rec.setValue({ fieldId: targetField, value: cleaned, ignoreFieldChange: true });
         } catch (e) {
             log.error({
-                title: 'NG Notes PDF copy failed',
+                title: 'NG Notes PDF inject failed',
                 details: (e.name || 'Error') + ': ' + (e.message || e) + (e.stack ? '\n' + e.stack : '')
             });
         }
     }
 
     return {
-        beforeSubmit: beforeSubmit
+        beforeLoad: beforeLoad
     };
 });
-
