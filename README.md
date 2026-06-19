@@ -45,26 +45,25 @@ so they keep working in the PDF.
    `centerpoint_ue_notes_pdf.js`, type **User Event**.
 3. Deploy it to the record type that has these fields (the `custevent` prefix means a
    CRM/event field — Event, Task, Phone Call, Case, etc.). Status **Released**.
-4. Make `custevent_ng_notes_pdf` a **Rich Text** field. NetSuite HTML-escapes the
-   values of plain/Long Text fields when building the Advanced PDF data model (same as
-   `Formula(Text)` vs `Formula(HTML)`), so a non-rich field renders its tags as literal
-   text. Only Rich Text fields are passed to the renderer as raw markup. Apply it to the
-   same record/forms. The scrubber already outputs well-formed XHTML, so re-save a
-   record to populate it.
-5. In the Advanced PDF template, reference the field plainly:
-   `${record.custevent_ng_notes_pdf}`
-   Do **not** add `?no_esc` — these templates use an undefined output format (no
-   auto-escaping), so `?no_esc` throws "output format isn't a markup format". And
-   `@unescaped` is not valid syntax. BFO only ships Helvetica/Times/Courier fonts, so
-   non-standard `font-family` values (e.g. Inter) fall back unless embedded.
-
-   Fallback — if a Rich Text destination re-normalizes the HTML on save and brings back
-   parse errors, keep the field as **Long Text** and decode NetSuite's escaping in the
-   template instead (works because the output format is undefined / non-escaping):
+4. Make `custevent_ng_notes_pdf` a **Long Text** field (not Rich Text). Long Text
+   stores exactly the clean bytes the scrubber writes. A **Rich Text** destination gets
+   re-serialized by NetSuite on save and again when read through a join, and that
+   round-trip can corrupt otherwise-clean markup (e.g. injecting a `<` into a `style`
+   attribute) — verified the hard way. Apply the field to the same record/forms.
+5. In the Advanced PDF template, NetSuite delivers a Long Text value HTML-**escaped**
+   (`&lt;p&gt;...`), so decode it back to markup right before output:
    ```
    ${record.custevent_ng_notes_pdf?replace("&lt;","<")?replace("&gt;",">")?replace("&quot;","\"")?replace("&amp;","&")}
    ```
-   (`&amp;` must be replaced last.)
+   (`&amp;` must be replaced last.) Do **not** use `?no_esc` — these templates use an
+   undefined output format (no auto-escaping), so `?no_esc` throws "output format isn't
+   a markup format"; `@unescaped` is not valid syntax either. BFO only ships
+   Helvetica/Times/Courier fonts, so non-standard `font-family` values (e.g. Inter) fall
+   back unless embedded.
+
+   Note: if the value ever arrives **unescaped** (renders as literal tags after the
+   decode), drop the `?replace` chain and reference the field plainly — escaping through
+   joins vs. direct field access can differ by record/template.
 
 ### Optional script parameters
 
