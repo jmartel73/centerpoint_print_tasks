@@ -81,8 +81,8 @@ check('unknown entity -> numeric amp', scrubHtml('&bogus;'), '&#38;bogus;');
 // --- balancing -------------------------------------------------------------
 check('unclosed p closed', scrubHtml('<p>hello'), '<p>hello</p>');
 check('mismatched nesting fixed',
-    scrubHtml('<div><p>text</div>'),
-    '<div><p>text</p></div>');
+    scrubHtml('<blockquote><em>text</blockquote>'),
+    '<blockquote><em>text</em></blockquote>');
 check('stray close dropped', scrubHtml('hello</span>'), 'hello');
 check('two open p auto-closed as siblings', scrubHtml('<p>a<p>b</p>'), '<p>a</p><p>b</p>');
 check('list items auto-closed as siblings',
@@ -186,6 +186,22 @@ excludes('shipment: no bare &id', shipOut, '&id=');
 contains('shipment: link preserved', shipOut, 'href="https://x.app.netsuite.com');
 contains('shipment: span/style preserved', shipOut, 'color:rgb(37, 85, 153)');
 contains('shipment: br self-closed', shipOut, '<br />');
+
+// --- unsupported block tags (BFO drops <div>; map to <p>) -------------------
+check('div -> p', scrubHtml('<div>hi</div>'), '<p>hi</p>');
+check('div keeps style as p', scrubHtml('<div style="color:red">x</div>'), '<p style="color:red">x</p>');
+check('section -> p', scrubHtml('<section>y</section>'), '<p>y</p>');
+excludes('no div survives', scrubHtml('<div>a</div><div>b</div>'), '<div');
+excludes('no closing div survives', scrubHtml('<div>a</div>'), '</div>');
+
+// Real Outlook-paste note: <p> and <div> blocks, fancy inline styles.
+var outlookNote = '<p>RUSH!!</p><p>Need in hand this coming Friday.</p>' +
+    '<div style="color:rgb(0, 0, 0) !important;font-family:Aptos, Arial, sans-serif;font-size:12pt;text-align:start;" data-ogsc="rgb(0, 0, 0)">These would be backlit graphics w/ SEG.</div>' +
+    '<div style="color:rgb(0, 0, 0) !important;">2 @ 39” x 98”</div>';
+var outOut = scrubHtml(outlookNote);
+excludes('outlook: no div tags remain', outOut, 'div');
+contains('outlook: div text becomes a paragraph', outOut, '<p style="color:rgb(0, 0, 0) !important;');
+contains('outlook: text preserved', outOut, 'These would be backlit graphics w/ SEG.');
 
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

@@ -18,6 +18,7 @@ culprits:
 | `Tom & Jerry`, `?a=1&b=2` | escaped: `Tom &amp; Jerry`, `?a=1&amp;b=2` |
 | `<p>a<p>b`, `<div><p>x</div>` | balanced, well-formed nesting |
 | `<script>`/`<style>`/`<head>`, comments, MS-Word `<o:p>`, conditional comments | removed |
+| `<div>` / HTML5 `<section>`,`<header>`… (BFO drops these in flow) | mapped to `<p>` |
 | `width=100` | quoted: `width="100"` |
 
 ## The solution

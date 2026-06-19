@@ -94,6 +94,20 @@ define([], function () {
         return html.replace(/\s*[\r\n]+\s*/g, ' ');
     }
 
+    /**
+     * BFO does not render HTML block containers like <div> in normal flow (in BFO a
+     * <div> is an absolute-positioning element), and the HTML5 sectioning tags aren't
+     * supported at all -- their text silently disappears. Map them to <p>, which renders.
+     */
+    function convertUnsupportedBlocks(html) {
+        var blocks = ['div', 'section', 'article', 'header', 'footer', 'aside', 'main', 'figure', 'figcaption'];
+        for (var i = 0; i < blocks.length; i++) {
+            html = html.replace(new RegExp('<' + blocks[i] + '\\b', 'gi'), '<p');
+            html = html.replace(new RegExp('</' + blocks[i] + '\\s*>', 'gi'), '</p>');
+        }
+        return html;
+    }
+
     function stripDangerousBlocks(html) {
         // Standard and downlevel-hidden conditional comments (<!--[if]>..<![endif]-->).
         html = html.replace(/<!--[\s\S]*?-->/g, '');
@@ -273,6 +287,7 @@ define([], function () {
         html = collapseNewlines(html);
 
         html = stripDangerousBlocks(html);
+        html = convertUnsupportedBlocks(html);
         html = neutralizeStrayBrackets(html);
         html = selfCloseVoidElements(html);
         html = fixEntities(html);
@@ -287,6 +302,7 @@ define([], function () {
         // Exposed for targeted unit testing.
         _internal: {
             collapseNewlines: collapseNewlines,
+            convertUnsupportedBlocks: convertUnsupportedBlocks,
             stripDangerousBlocks: stripDangerousBlocks,
             neutralizeStrayBrackets: neutralizeStrayBrackets,
             selfCloseVoidElements: selfCloseVoidElements,
