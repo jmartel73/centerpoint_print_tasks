@@ -45,8 +45,12 @@ so they keep working in the PDF.
    `centerpoint_ue_notes_pdf.js`, type **User Event**.
 3. Deploy it to the record type that has these fields (the `custevent` prefix means a
    CRM/event field — Event, Task, Phone Call, Case, etc.). Status **Released**.
-4. Make sure `custevent_ng_notes_pdf` exists, is large enough for the content
-   (Long Text / Rich Text), and is applied to the same record/forms.
+4. Make `custevent_ng_notes_pdf` a **Long Text** field — **not Rich Text**. A Rich
+   Text destination re-sanitizes/normalizes its content on save (re-introducing
+   `&nbsp;`, un-self-closing `<br>`, dropping tags), which reverses the scrub. A Long
+   Text field stores the exact bytes you write. Apply it to the same record/forms, and
+   set its **Display Type to Hidden** (it only feeds the PDF; on a form it would show
+   raw HTML as text).
 5. In the Advanced PDF template, render the new field **unescaped**, e.g.
    `${record.custevent_ng_notes_pdf@unescaped}` (or `<#noescape>...</#noescape>`),
    so the HTML is rendered as markup rather than printed as text.
