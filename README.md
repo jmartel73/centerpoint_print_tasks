@@ -34,7 +34,20 @@ so they keep working in the PDF.
 |---|---|
 | `SuiteScripts/centerpoint/centerpoint_lib_html_pdf_scrub.js` | Reusable, dependency-free scrub library (`scrubHtml`) |
 | `SuiteScripts/centerpoint/centerpoint_ue_notes_pdf.js` | User Event script (`beforeSubmit`) wiring the field to the library |
+| `SuiteScripts/centerpoint/centerpoint_ue_notes_pdf_copy.js` | User Event that copies the scrubbed notes onto the print record (avoids join truncation) |
 | `test/scrub.test.js` | Offline unit tests (`node test/scrub.test.js`) |
+
+### Important: do not read the field through a join
+
+Advanced PDF templates **truncate fields read through a record join** (e.g.
+`record.custrecord_..._projtask.custevent_ng_notes_pdf` gets cut off around ~1,000
+characters, mid-tag, which re-breaks the XHTML). If the PDF is printed from a record
+that only *references* the task, deploy `centerpoint_ue_notes_pdf_copy.js` on that
+print record. It `record.load`s the task and copies the full scrubbed notes into a
+local Long Text field, which the template then references **directly** (no join):
+```
+${record.custrecord_ng_notes_pdf_local?replace("&lt;","<")?replace("&gt;",">")?replace("&quot;","\"")?replace("&amp;","&")}
+```
 
 ## Deployment
 
@@ -92,8 +105,13 @@ script's **Execution Log** (entries "NG Notes RAW" / "NG Notes SCRUBBED").
   to Debug, re-save, and inspect the "NG Notes RAW" log entry. Tip: `${field?html}` in
   the template prints the delivered value as literal text so you can see exactly what
   arrives (escaped vs. raw, and where any stray `<` is).
-- **HTML prints as literal text** — the destination is not a Rich Text field, or the
-  template adds `?no_esc` on an undefined output format. See deployment step 5.
+- **HTML prints as literal text** — expected for a Long Text field; decode it in the
+  template with the `?replace` chain (step 5). Do not use `?no_esc` on an undefined
+  output format.
+- **Value is cut off mid-tag / `<` error only when decoded** — the template is reading
+  the field through a **join**, which truncates it (~1,000 chars). Confirm with
+  `${field?length}` in the template. Fix by copying the notes onto the print record
+  (see `centerpoint_ue_notes_pdf_copy.js`) and referencing it without a join.
 
 ## Notes / limitations
 
