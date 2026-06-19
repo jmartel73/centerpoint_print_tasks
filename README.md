@@ -22,22 +22,40 @@ culprits:
 
 ## The solution
 
-A **User Event script** runs on save, scrubs the Rich Text notes (`custevent1`) into
-well-formed XHTML, and stores the result in a Long Text field that the PDF template
-references. Hyperlinks (`<a href>`) and images (`<img src>`) are preserved.
+A **User Event script** scrubs the Rich Text notes (`custevent1`) into well-formed
+XHTML, and a Long Text field that the PDF template references holds the result.
+Hyperlinks (`<a href>`) and images (`<img src>`) are preserved.
 
-Two deployment shapes:
+### Confirmed working configuration (Centerpoint)
+
+The live setup that renders correctly:
+
+- Print record type: `customrecord_ng_eh_link_proj_task_pdf` (printed via the standard
+  `hotprint.nl` servlet from a custom button).
+- Task reference field on it: `custrecord_ng_eh_projtaskpdf_projtask` → a Project Task.
+- Raw notes source: `custevent1` (Rich Text) on the Project Task.
+- Local field on the print record: `custrecord_ng_notes_pdf_local` (Long Text).
+- Script: `centerpoint_ue_notes_pdf_copy.js` deployed on
+  `customrecord_ng_eh_link_proj_task_pdf` (runs on **beforeLoad**, PRINT context).
+- Template line:
+  ```
+  ${record.custrecord_ng_notes_pdf_local?replace("&lt;","<")?replace("&gt;",">")?replace("&quot;","\"")?replace("&amp;","&")}
+  ```
+
+Editing + saving the **task** is enough; the print record is never saved — beforeLoad
+recomputes the notes at print time.
+
+Two deployment shapes in general:
 
 - **Notes field and PDF are on the same record** → use `centerpoint_ue_notes_pdf.js`
   (scrubs `custevent1` → `custevent_ng_notes_pdf` on that record).
-- **PDF is printed from a record that only *references* the task** (notes live on a
-  related Project Task), and you only ever save the **task**, not the print record →
-  use **only** `centerpoint_ue_notes_pdf_copy.js` on the print record. It runs on
-  **beforeLoad (print/email/view)**: it loads the task, scrubs `custevent1`, and sets a
-  local Long Text field in memory, which the template references **directly** (no join,
-  no truncation). Because it computes at print time, saving the task is enough — you
-  never save the print record. In this shape you do **not** need the other script or a
-  notes field on the task.
+- **PDF is printed from a record that only *references* the task** (the Centerpoint case
+  above), and you only ever save the **task**, not the print record → use **only**
+  `centerpoint_ue_notes_pdf_copy.js` on the print record. It runs on **beforeLoad
+  (print/email/view)**: it loads the task, scrubs `custevent1`, and sets a local Long
+  Text field in memory, which the template references **directly** (no join, no
+  truncation). In this shape you do **not** need the other script or a notes field on
+  the task.
 
 ### Files
 
