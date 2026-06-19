@@ -51,9 +51,13 @@ so they keep working in the PDF.
    Text field stores the exact bytes you write. Apply it to the same record/forms, and
    set its **Display Type to Hidden** (it only feeds the PDF; on a form it would show
    raw HTML as text).
-5. In the Advanced PDF template, render the new field **unescaped**, e.g.
-   `${record.custevent_ng_notes_pdf@unescaped}` (or `<#noescape>...</#noescape>`),
-   so the HTML is rendered as markup rather than printed as text.
+5. In the Advanced PDF template, render the new field with auto-escaping disabled,
+   otherwise NetSuite escapes the `<`/`>` and the HTML prints as literal text. Use the
+   FreeMarker `?no_esc` built-in:
+   `${record.custevent_ng_notes_pdf?no_esc}`
+   (or wrap a block in `<#noautoesc>...</#noautoesc>`). Note: `@unescaped` is NOT valid
+   syntax. BFO only ships Helvetica/Times/Courier fonts, so non-standard
+   `font-family` values (e.g. Inter) fall back unless embedded.
 
 ### Optional script parameters
 
