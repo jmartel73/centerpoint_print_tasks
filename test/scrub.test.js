@@ -70,13 +70,13 @@ contains('img self-closed + src preserved',
 check('nbsp -> numeric', scrubHtml('a&nbsp;b'), 'a&#160;b');
 check('copy -> numeric', scrubHtml('&copy;'), '&#169;');
 check('mdash -> numeric', scrubHtml('a&mdash;b'), 'a&#8212;b');
-check('xml amp kept', scrubHtml('a&amp;b'), 'a&amp;b');
-check('bare ampersand escaped', scrubHtml('Tom & Jerry'), 'Tom &amp; Jerry');
-check('ampersand in url escaped',
+check('xml amp -> numeric', scrubHtml('a&amp;b'), 'a&#38;b');
+check('bare ampersand -> numeric', scrubHtml('Tom & Jerry'), 'Tom &#38; Jerry');
+check('ampersand in url -> numeric',
     scrubHtml('<a href="https://x.com?a=1&b=2">L</a>'),
-    '<a href="https://x.com?a=1&amp;b=2">L</a>');
+    '<a href="https://x.com?a=1&#38;b=2">L</a>');
 check('numeric entity kept', scrubHtml('a&#160;b'), 'a&#160;b');
-check('unknown entity escaped', scrubHtml('&bogus;'), '&amp;bogus;');
+check('unknown entity -> numeric amp', scrubHtml('&bogus;'), '&#38;bogus;');
 
 // --- balancing -------------------------------------------------------------
 check('unclosed p closed', scrubHtml('<p>hello'), '<p>hello</p>');
@@ -93,14 +93,14 @@ check('table cells auto-closed',
     '<table><tr><td>a</td><td>b</td></tr></table>');
 
 // --- stray '<' / malformed tags (BFO "must not contain '<'") ----------------
-check('literal less-than in text escaped', scrubHtml('lead time < 2 weeks'), 'lead time &lt; 2 weeks');
-check('less-than-three escaped', scrubHtml('I <3 it'), 'I &lt;3 it');
-check('lt inside quoted style attr escaped',
+check('literal less-than in text -> numeric', scrubHtml('lead time < 2 weeks'), 'lead time &#60; 2 weeks');
+check('less-than-three -> numeric', scrubHtml('I <3 it'), 'I &#60;3 it');
+check('lt inside quoted style attr -> numeric',
     scrubHtml('<p style="a<b">x</p>'),
-    '<p style="a&lt;b">x</p>');
+    '<p style="a&#60;b">x</p>');
 contains('tag with missing closing quote does not crash, < neutralized',
     scrubHtml('<p>ok</p><p style="color:#27'),
-    '&lt;p style=');
+    '&#60;p style=');
 contains('valid tag after a broken one is preserved',
     scrubHtml('<p style="x:1<p style="color:red;">good</p>'),
     '<p style="color:red;">good</p>');
@@ -150,7 +150,7 @@ var sample = '<html><body>' +
 var out = scrubHtml(sample);
 console.log('\n--- combined sample output ---\n' + out + '\n');
 contains('sample: nbsp numericized', out, '&#160;');
-contains('sample: url amp escaped', out, 'x=1&amp;y=2');
+contains('sample: url amp -> numeric', out, 'x=1&#38;y=2');
 contains('sample: img self-closed', out, '<img src="https://ex.com/p.png" />');
 contains('sample: br self-closed', out, '<br />');
 excludes('sample: no msoffice', out, 'o:p');
@@ -181,7 +181,7 @@ var shipmentNote = '<p>Hi Haim,<br /><span style="color:rgb(230, 76, 76);"><stro
     'href="https://x.app.netsuite.com/app/common/custom/custrecordentry.nl?rectype=859&amp;id=1004646" ' +
     'target="_self"><span style="color:rgb(76, 76, 230);"><strong>S1004646</strong></span></a><br />Thanks :)</p>';
 var shipOut = scrubHtml(shipmentNote);
-contains('shipment: escaped ampersand preserved', shipOut, 'rectype=859&amp;id=1004646');
+contains('shipment: ampersand kept valid (numeric)', shipOut, 'rectype=859&#38;id=1004646');
 excludes('shipment: no bare &id', shipOut, '&id=');
 contains('shipment: link preserved', shipOut, 'href="https://x.app.netsuite.com');
 contains('shipment: span/style preserved', shipOut, 'color:rgb(37, 85, 153)');

@@ -37,20 +37,21 @@ The live setup that renders correctly:
 - Local field on the print record: `custrecord_ng_notes_pdf_local` (Long Text).
 - Script: `centerpoint_ue_notes_pdf_copy.js` deployed on
   `customrecord_ng_eh_link_proj_task_pdf` (runs on **beforeLoad**, PRINT context).
-- Template line (**plain, no decode** — see below):
+- Template line (**decode only the tag brackets**):
   ```
-  ${record.custrecord_ng_notes_pdf_local}
+  ${record.custrecord_ng_notes_pdf_local?replace("&lt;","<")?replace("&gt;",">")}
   ```
 
 Editing + saving the **task** is enough; the print record is never saved — beforeLoad
 recomputes the notes at print time.
 
-**Do not add a `?replace` decode chain on the beforeLoad path.** A beforeLoad-injected
-value reaches the template raw (NetSuite only HTML-escapes DB-sourced field values, not
-script-set in-memory ones), and the scrubber already emits valid XHTML. Decoding it
-corrupts valid entities — e.g. `?replace("&amp;","&")` turns a correct `&amp;` (in a
-link's `&amp;id=`) into a bare `&`, which BFO rejects with *"entity must end with ';'"*.
-The decode chain is **only** for the stored-field-read-through-a-join shape below.
+**Escaping on the beforeLoad path:** NetSuite escapes the injected value's `<`/`>` to
+`&lt;`/`&gt;` (so tags would otherwise print as literal text) but leaves `&` untouched.
+The scrubber emits **numeric** entities for content (`&#38;`, `&#60;`, `&#160;`), so the
+only `&lt;`/`&gt;` in the delivered value are NetSuite's tag-bracket escaping — decode
+exactly those and nothing else. **Do not** decode `&amp;`: there is none, and doing so
+turns a valid `&#38;` (e.g. a link's `?rectype=859&#38;id=...`) into a bare `&`, which
+BFO rejects with *"entity must end with ';'"*.
 
 Two deployment shapes in general:
 

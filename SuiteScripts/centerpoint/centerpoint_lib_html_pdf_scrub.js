@@ -32,9 +32,12 @@ define([], function () {
         link: 1, meta: 1, param: 1, source: 1, track: 1, wbr: 1
     };
 
-    // The only named entities that are legal in raw XML; everything else must be
-    // numeric (or escaped) for the BFO parser.
-    var XML_ENTITIES = { amp: 1, lt: 1, gt: 1, quot: 1, apos: 1 };
+    // XML's named entities mapped to numeric. The scrubber emits NUMERIC entities for
+    // all content (never named &amp;/&lt;/&gt;), so that when this value is injected
+    // into an Advanced PDF the only &lt;/&gt; present come from NetSuite escaping the
+    // real tag brackets -- which the template decodes unambiguously. Content entities
+    // (e.g. &#38; in a URL, &#60; for a typed '<') survive untouched.
+    var XML_ENTITY_TO_NUMERIC = { amp: 38, lt: 60, gt: 62, quot: 34, apos: 39 };
 
     // Elements with implied end tags: opening one closes any open "peer" on top
     // of the stack (e.g. <li>a<li>b -> <li>a</li><li>b</li> rather than nesting).
@@ -130,11 +133,12 @@ define([], function () {
             if (ch === '<') {
                 var match = COMPLETE_TAG_RE.exec(html.slice(i));
                 if (match) {
-                    // Keep the leading '<'; escape any '<' inside attribute values.
-                    out += '<' + match[0].slice(1).replace(/</g, '&lt;');
+                    // Keep the leading '<'; escape any '<' inside attribute values
+                    // (numeric, so it survives the template's &lt; decode).
+                    out += '<' + match[0].slice(1).replace(/</g, '&#60;');
                     i += match[0].length;
                 } else {
-                    out += '&lt;';
+                    out += '&#60;';
                     i += 1;
                 }
             } else {
@@ -164,17 +168,17 @@ define([], function () {
      */
     function fixEntities(html) {
         html = html.replace(/&([a-zA-Z][a-zA-Z0-9]*);/g, function (match, name) {
-            if (XML_ENTITIES[name]) {
-                return match;
+            if (XML_ENTITY_TO_NUMERIC[name] != null) {
+                return '&#' + XML_ENTITY_TO_NUMERIC[name] + ';';
             }
             if (NAMED_ENTITY_TO_NUMERIC[name] != null) {
                 return '&#' + NAMED_ENTITY_TO_NUMERIC[name] + ';';
             }
-            // Unknown named entity -> render the text literally instead of erroring.
-            return '&amp;' + name + ';';
+            // Unknown named entity -> escape its ampersand (numeric) so it renders as text.
+            return '&#38;' + name + ';';
         });
-        // Any remaining bare ampersand (not a valid XML / numeric reference).
-        html = html.replace(/&(?!amp;|lt;|gt;|quot;|apos;|#[0-9]+;|#x[0-9a-fA-F]+;)/g, '&amp;');
+        // Any remaining bare ampersand (not already a numeric reference) -> numeric.
+        html = html.replace(/&(?!#[0-9]+;|#x[0-9a-fA-F]+;)/g, '&#38;');
         return html;
     }
 
