@@ -37,13 +37,20 @@ The live setup that renders correctly:
 - Local field on the print record: `custrecord_ng_notes_pdf_local` (Long Text).
 - Script: `centerpoint_ue_notes_pdf_copy.js` deployed on
   `customrecord_ng_eh_link_proj_task_pdf` (runs on **beforeLoad**, PRINT context).
-- Template line:
+- Template line (**plain, no decode** — see below):
   ```
-  ${record.custrecord_ng_notes_pdf_local?replace("&lt;","<")?replace("&gt;",">")?replace("&quot;","\"")?replace("&amp;","&")}
+  ${record.custrecord_ng_notes_pdf_local}
   ```
 
 Editing + saving the **task** is enough; the print record is never saved — beforeLoad
 recomputes the notes at print time.
+
+**Do not add a `?replace` decode chain on the beforeLoad path.** A beforeLoad-injected
+value reaches the template raw (NetSuite only HTML-escapes DB-sourced field values, not
+script-set in-memory ones), and the scrubber already emits valid XHTML. Decoding it
+corrupts valid entities — e.g. `?replace("&amp;","&")` turns a correct `&amp;` (in a
+link's `&amp;id=`) into a bare `&`, which BFO rejects with *"entity must end with ';'"*.
+The decode chain is **only** for the stored-field-read-through-a-join shape below.
 
 Two deployment shapes in general:
 

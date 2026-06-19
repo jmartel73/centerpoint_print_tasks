@@ -175,5 +175,17 @@ contains('newline-in-tag: opening tag intact', fixedTag, '<p style="color:#272B3
 excludes('newline-in-tag: no < inside the opening tag',
     fixedTag.slice(fixedTag.indexOf('<p'), fixedTag.indexOf('>') + 1).slice(2, -1), '<');
 
+// Real "rushed shipment" note: escaped ampersand in a link must stay &amp;.
+var shipmentNote = '<p>Hi Haim,<br /><span style="color:rgb(230, 76, 76);"><strong>RUSHED!</strong></span><br />' +
+    '<a class="dottedlink" style="color:rgb(37, 85, 153) !important;" ' +
+    'href="https://x.app.netsuite.com/app/common/custom/custrecordentry.nl?rectype=859&amp;id=1004646" ' +
+    'target="_self"><span style="color:rgb(76, 76, 230);"><strong>S1004646</strong></span></a><br />Thanks :)</p>';
+var shipOut = scrubHtml(shipmentNote);
+contains('shipment: escaped ampersand preserved', shipOut, 'rectype=859&amp;id=1004646');
+excludes('shipment: no bare &id', shipOut, '&id=');
+contains('shipment: link preserved', shipOut, 'href="https://x.app.netsuite.com');
+contains('shipment: span/style preserved', shipOut, 'color:rgb(37, 85, 153)');
+contains('shipment: br self-closed', shipOut, '<br />');
+
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

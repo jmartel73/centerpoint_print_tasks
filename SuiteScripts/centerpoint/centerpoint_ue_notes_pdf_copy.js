@@ -10,8 +10,11 @@
  * template can reference it directly. Because it computes at print time, editing the
  * task's notes is enough -- you never have to save the print record.
  *
- * Template reference (Long Text values arrive HTML-escaped, so decode them):
- *   ${record.custrecord_ng_notes_pdf_local?replace("&lt;","<")?replace("&gt;",">")?replace("&quot;","\"")?replace("&amp;","&")}
+ * Template reference -- plain, NO decode chain. A beforeLoad-injected value reaches the
+ * template raw (NetSuite does not HTML-escape script-set in-memory values the way it
+ * escapes DB-sourced fields), and the scrubber already emits valid XHTML, so BFO parses
+ * it directly. Decoding here would corrupt valid entities (e.g. &amp; -> bare &):
+ *   ${record.custrecord_ng_notes_pdf_local}
  *
  * Deploy on the record the PDF is printed from (the one that references the task). The
  * target field must exist on that record (Long Text); it does not need "Store Value".
